@@ -1,0 +1,27 @@
+#version 430 core
+
+layout (local_size_x = 10, local_size_y = 10, local_size_z = 1) in;
+
+layout(rgba32f, binding = 0) uniform image2D imgOutput;
+
+layout (location = 0) uniform float t;
+
+void main(){
+    vec4 value = vec4(0.0, 0.0, 0.0, 1.0);
+    ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
+    uint width = gl_NumWorkGroups.x * gl_WorkGroupSize.x;
+    uint height = gl_NumWorkGroups.y * gl_WorkGroupSize.y;
+	
+    value.x = mod((float(texelCoord.x))/(width) + t,1);
+    value.y = float(texelCoord.y)/(height);
+    vec2 uv = vec2(texelCoord.xy)/(gl_NumWorkGroups.xy*gl_WorkGroupSize.xy);
+    uv = 2* uv - vec2(1.0);
+    float dist = sqrt(pow(uv.x,2)+pow(uv.y,2));
+    dist = mod(dist+t,1.0);
+
+    vec3 color = vec3(dist);
+    // value = vec4(color,1.0);
+	
+    imageStore(imgOutput, texelCoord, value);
+    
+}
