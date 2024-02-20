@@ -2,7 +2,7 @@ import glfw
 from OpenGL.GL import *
 
 
-cs_source = open("./shaders/compute.comp","r").read()
+cs_source = open("./shaders/raytrace.comp","r").read()
 
 width = 800
 height = 600
@@ -69,7 +69,7 @@ def main():
 
     glfw.set_framebuffer_size_callback(window, framebuffer_size_callback)
     glViewport(0, 0, width, height)
-    glfw.swap_interval(0)
+    glfw.swap_interval(1)
     
     # Create Vertex Array Object (VAO), Vertex Buffer Object (VBO), and Element Buffer Object (EBO)
     VAO = glGenVertexArrays(1)
