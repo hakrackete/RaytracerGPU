@@ -1,5 +1,33 @@
 import glfw
 from OpenGL.GL import *
+import ctypes
+import numpy as np
+
+# same seed for testing purposes
+np.random.seed(0)
+
+class Sphere(ctypes.Structure):
+    _fields_ = [("position", ctypes.c_float * 3),
+                ("radius", ctypes.c_float),
+                ("color", ctypes.c_float * 3)]
+
+
+def generate_random_spheres(num_spheres, min_position, max_position, min_radius, max_radius, min_color, max_color):
+    spheres = (Sphere * num_spheres)()  # Create an array of Sphere structures
+    
+    for sphere in spheres:
+        # Generate random position, radius, and color for each sphere
+        sphere.position[0] = np.random.uniform(min_position[0], max_position[0])
+        sphere.position[1] = np.random.uniform(min_position[1], max_position[1])
+        sphere.position[2] = np.random.uniform(min_position[2], max_position[2])
+        
+        sphere.radius = np.random.uniform(min_radius, max_radius)
+        
+        sphere.color[0] = np.random.uniform(min_color[0], max_color[0])
+        sphere.color[1] = np.random.uniform(min_color[1], max_color[1])
+        sphere.color[2] = np.random.uniform(min_color[2], max_color[2])
+
+    return spheres
 
 
 cs_source = open("./shaders/raytrace.comp","r").read()
@@ -60,7 +88,7 @@ def main():
     glfw.window_hint(glfw.CONTEXT_VERSION_MINOR,3)
     glfw.window_hint(glfw.OPENGL_PROFILE,glfw.OPENGL_CORE_PROFILE)
 
-    window = glfw.create_window(width, height, "halo", None, None)
+    window = glfw.create_window(width, height, "hallo", None, None)
     if not window:
         print("unable to create Window")
         glfw.terminate()
@@ -97,6 +125,21 @@ def main():
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), ctypes.c_void_p(2 * sizeof(GLfloat)))
     glEnableVertexAttribArray(1)
 
+    num_spheres = 10
+    min_position = np.array([-5.0, -5.0, -15.0])
+    max_position = np.array([5.0, 5.0, -3.0])
+    min_color = np.array([0,0,0])
+    max_color = np.array([1,1,1])
+    min_radius = 0.1
+    max_radius = 2.0
+
+    mySpheres = generate_random_spheres(num_spheres,min_position,max_position,min_radius,max_radius,min_color,max_color)
+    print(type(mySpheres))
+
+    spheresID = glGenBuffers(1)
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER,spheresID)
+    glBufferData(GL_SHADER_STORAGE_BUFFER,mySpheres,GL_STATIC_DRAW)
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER,1,spheresID)
 
     compute = compile_shader(cs_source,GL_COMPUTE_SHADER)
 
@@ -137,9 +180,6 @@ def main():
         print(f"OpenGL error: {error}")
 
 
-
-
-
     glClearColor(0.3,0.7,0.3,1.0)
 
     deltaTime = 0
@@ -151,7 +191,7 @@ def main():
         # print(type(currentFrame))
         deltaTime = currentFrame - lastFrame
         lastFrame = currentFrame
-        if fCounter > 600:
+        if fCounter > 60:
             print(f"FPS: {1/deltaTime}")
             fCounter =0
         else:
