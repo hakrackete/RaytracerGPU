@@ -1,21 +1,8 @@
 #version 430 core
 
-layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 10, local_size_y = 10, local_size_z = 1) in;
 
 layout(rgba32f, binding = 0) uniform image2D imgOutput;
-
-
-
-layout(binding = 1) buffer readonly SphereBuffer {
-    vec4 position_radius[20];
-    vec4 color_padding[20];
-};
-
-layout(binding = 2)buffer readonly myFloats{
-  float random_float[];
-};
-
-// layout (location = 0) uniform float t;
 
 struct HitRecord {
     float parameter;
@@ -25,13 +12,35 @@ struct HitRecord {
     vec3 color;
 };
 
-bool sphere_intersect(vec3 ray_o, vec3 ray_d, int myId, out HitRecord hitRecord){
-  vec3 sphere_c = position_radius[myId].xyz;
-  float sphere_r = position_radius[myId].w;
-  hitRecord.rayDirection = ray_d;
-  vec3 em = ray_o - sphere_c;
-  float a = dot(ray_d,ray_d);
-  float b = 2 * dot(ray_d,em);
+struct Sphere{
+  vec4 position_radius;
+  vec4 color_padding;
+};
+
+struct Ray{
+  vec3 o;
+  vec3 d;
+};
+
+layout(binding = 1) buffer readonly SphereBuffer {
+  Sphere spheres[];
+};
+
+layout(binding = 2)buffer readonly myFloats{
+  float random_float[];
+};
+
+layout (location = 0) uniform float t;
+
+
+
+bool sphere_intersect(Ray ray, int myId, out HitRecord hitRecord){
+  vec3 sphere_c = spheres[myId].position_radius.xyz;
+  float sphere_r = spheres[myId].position_radius.w;
+  hitRecord.rayDirection = ray.d;
+  vec3 em = ray.o - sphere_c;
+  float a = dot(ray.d,ray.d);
+  float b = 2 * dot(ray.d,em);
   float c = dot(em,em) - pow(sphere_r,2);
 
   float disc = pow(b,2) - 4 * a * c;
@@ -49,13 +58,13 @@ bool sphere_intersect(vec3 ray_o, vec3 ray_d, int myId, out HitRecord hitRecord)
   else if (smalles_root < 0 && biggest_root > 0){
     smalles_root = biggest_root;
   }
-  vec3 schnittpunkt = ray_o + smalles_root * ray_d;
-  float schnittdistanz = length(schnittpunkt - ray_o);
+  vec3 schnittpunkt = ray.o + smalles_root * ray.d;
+  float schnittdistanz = length(schnittpunkt - ray.o);
   if (schnittdistanz > 0 && (hitRecord.parameter == -1 || schnittdistanz < hitRecord.parameter)){
     hitRecord.parameter = schnittdistanz;
     hitRecord.normal = normalize(schnittpunkt - sphere_c);
     hitRecord.intersectionPoint = schnittpunkt;
-    hitRecord.color = color_padding[myId].xyz;
+    hitRecord.color = spheres[myId].color_padding.xyz;
     return true;
   }
   return false;
@@ -88,9 +97,9 @@ void shade(HitRecord hitRecord, vec3 lightsource, out vec3 color){
   // color = R;
 }
 
-void intersect(vec3 ray_o, vec3 ray_d,out HitRecord hitRecord){
-  for (int id = 0; id < 20; id++){
-    sphere_intersect(ray_o,ray_d,id,hitRecord);
+void intersect(Ray ray,out HitRecord hitRecord){
+  for (int id = 0; id < spheres.length(); id++){
+    sphere_intersect(ray,id,hitRecord);
   }
 }
 
@@ -100,17 +109,19 @@ void main(){
 
     vec4 pixel = vec4(0.0, 0.0, 0.0, 1.0);
     ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+    vec2 jitter = noise2(t);
+    vec2 AA_pixel_coords = pixel_coords + jitter;
     ivec2 dims = imageSize(imgOutput);
 
 
     float max_x = dims.x / 100.0;
     float max_y = dims.y /100.0;
-    vec2 uv = vec2(pixel_coords)/ dims * 2 - vec2(1.0); 
+    vec2 uv = vec2(pixel_coords)/ dims * 2 - vec2(1.0);
+
     float x = uv.x;
     float y = uv.y;
 
-    vec3 ray_o = vec3(x * max_x,y*max_y,20.0);
-    vec3 ray_d = normalize(vec3(0.0,0.0,-1.0));
+
     
     // vec3 sphere_c = vec3(0.0,0.0,-10.0);
     // float sphere_r = 3.0;
@@ -119,11 +130,14 @@ void main(){
     vec3 lightsource =  vec3(10.0,0.0,0.0);
     HitRecord hitRecord;
     hitRecord.parameter = -1;
-    intersect(ray_o,ray_d,hitRecord);
+    Ray ray;
+    ray.o = vec3(x * max_x,y*max_y,0.0);
+    ray.d = normalize(vec3(0.0,0.0,-1.0));
+    intersect(ray,hitRecord);
     vec3 myColor = vec3(0.0);
     shade(hitRecord,lightsource,myColor);
     // float bufferSize = spheres.length();
-    // myColor = vec3(position_radius[1].xyz);
+    // myColor = vec3(t);
     memoryBarrierBuffer();
 
     // if (spheres[1].radius ==0){

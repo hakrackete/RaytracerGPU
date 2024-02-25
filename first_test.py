@@ -18,7 +18,7 @@ def generate_random_spheres_new(num_spheres, min_position, max_position, min_rad
     # Combine colors with padding into color_padding array
     color_padding = np.column_stack((colors, np.zeros(num_spheres, dtype=np.float32)))
 
-    combined_array = np.concatenate((position_radius, color_padding), axis=0)
+    combined_array = np.hstack((position_radius, color_padding))
 
 
     return combined_array
@@ -82,7 +82,7 @@ def main():
     glfw.window_hint(glfw.CONTEXT_VERSION_MINOR,3)
     glfw.window_hint(glfw.OPENGL_PROFILE,glfw.OPENGL_CORE_PROFILE)
 
-    window = glfw.create_window(width, height, "hallo", None, None)
+    window = glfw.create_window((width), (height), "hallo", None, None)
     if not window:
         print("unable to create Window")
         glfw.terminate()
@@ -91,7 +91,7 @@ def main():
 
     glfw.set_framebuffer_size_callback(window, framebuffer_size_callback)
     glViewport(0, 0, width, height)
-    glfw.swap_interval(1)
+    glfw.swap_interval(0)
     
     # Create Vertex Array Object (VAO), Vertex Buffer Object (VBO), and Element Buffer Object (EBO)
     VAO = glGenVertexArrays(1)
@@ -160,7 +160,7 @@ def main():
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, None);
     glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
     
-    num_spheres = 20
+    num_spheres = 1000
     min_position = np.array([-5.0, -5.0, -15.0])
     max_position = np.array([5.0, 5.0, -3.0])
     min_color = np.array([0,0,0])
@@ -230,12 +230,12 @@ def main():
 
         glUseProgram(compute_Programm)
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT)
-        # glUniform1f(t_locations,currentFrame)
+        glUniform1f(t_locations,currentFrame)
         error = glGetError()
         if error != GL_NO_ERROR:
             print(f"OpenGL error: {error}")
 
-        glDispatchCompute(int(width),int(height),1)
+        glDispatchCompute(int(width/10),int(height/10),1)
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 
