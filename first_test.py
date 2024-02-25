@@ -4,30 +4,24 @@ import ctypes
 import numpy as np
 
 # same seed for testing purposes
-np.random.seed(0)
+# np.random.seed(42)
 
-class Sphere(ctypes.Structure):
-    _fields_ = [("position", ctypes.c_float * 3),
-                ("radius", ctypes.c_float),
-                ("color", ctypes.c_float * 3)]
+def generate_random_spheres_new(num_spheres, min_position, max_position, min_radius, max_radius, min_color, max_color):
+    # Generate random positions, radii, and colors for each sphere
+    positions = np.random.uniform(min_position, max_position, size=(num_spheres, 3)).astype(np.float32)
+    radii = np.random.uniform(min_radius, max_radius, size=num_spheres).astype(np.float32)
+    colors = np.random.uniform(min_color, max_color, size=(num_spheres, 3)).astype(np.float32)
+
+    # Combine positions and radii into position_radius array
+    position_radius = np.column_stack((positions, radii))
+
+    # Combine colors with padding into color_padding array
+    color_padding = np.column_stack((colors, np.zeros(num_spheres, dtype=np.float32)))
+
+    combined_array = np.concatenate((position_radius, color_padding), axis=0)
 
 
-def generate_random_spheres(num_spheres, min_position, max_position, min_radius, max_radius, min_color, max_color):
-    spheres = (Sphere * num_spheres)()  # Create an array of Sphere structures
-    
-    for sphere in spheres:
-        # Generate random position, radius, and color for each sphere
-        sphere.position[0] = np.random.uniform(min_position[0], max_position[0])
-        sphere.position[1] = np.random.uniform(min_position[1], max_position[1])
-        sphere.position[2] = np.random.uniform(min_position[2], max_position[2])
-        
-        sphere.radius = np.random.uniform(min_radius, max_radius)
-        
-        sphere.color[0] = np.random.uniform(min_color[0], max_color[0])
-        sphere.color[1] = np.random.uniform(min_color[1], max_color[1])
-        sphere.color[2] = np.random.uniform(min_color[2], max_color[2])
-
-    return spheres
+    return combined_array
 
 
 cs_source = open("./shaders/raytrace.comp","r").read()
@@ -105,6 +99,7 @@ def main():
 
     # Bind VAO
     glBindVertexArray(VAO)
+    
 
     # Vertex data for a full-screen quad
     vertices = [
@@ -125,21 +120,16 @@ def main():
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), ctypes.c_void_p(2 * sizeof(GLfloat)))
     glEnableVertexAttribArray(1)
 
-    num_spheres = 10
-    min_position = np.array([-5.0, -5.0, -15.0])
-    max_position = np.array([5.0, 5.0, -3.0])
-    min_color = np.array([0,0,0])
-    max_color = np.array([1,1,1])
-    min_radius = 0.1
-    max_radius = 2.0
+    float_buffer = glGenBuffers(1)
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, float_buffer)
 
-    mySpheres = generate_random_spheres(num_spheres,min_position,max_position,min_radius,max_radius,min_color,max_color)
-    print(type(mySpheres))
+    float_array =np.array([0.2,0.4,0.2],dtype=np.float32) 
+    print(float_array)
+    glBufferData(GL_SHADER_STORAGE_BUFFER, float_array.nbytes, float_array, GL_DYNAMIC_DRAW)
+    print(float_array.nbytes)
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, float_buffer)
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT)
 
-    spheresID = glGenBuffers(1)
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER,spheresID)
-    glBufferData(GL_SHADER_STORAGE_BUFFER,mySpheres,GL_STATIC_DRAW)
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER,1,spheresID)
 
     compute = compile_shader(cs_source,GL_COMPUTE_SHADER)
 
@@ -170,11 +160,52 @@ def main():
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, None);
     glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
     
+    num_spheres = 20
+    min_position = np.array([-5.0, -5.0, -15.0])
+    max_position = np.array([5.0, 5.0, -3.0])
+    min_color = np.array([0,0,0])
+    max_color = np.array([1,1,1])
+    min_radius = 0.3
+    max_radius = 0.8
+
+    # mySpheres = generate_random_spheres(num_spheres,min_position,max_position,min_radius,max_radius,min_color,max_color)
+    sphere_array = generate_random_spheres_new(num_spheres,min_position,max_position,min_radius,max_radius,min_color,max_color)
+
+    # sphere_array = np.array(random_spheres, dtype=[("position_radius", np.float32, 4), ("color_padding", np.float32, 4)])
+    # print(sphere_array)
+
+    # print(mySpheres[1].color[0])
+
+    # Buffer-Objekt erstellen
+    print(sphere_array)
+    sphere_buffer = glGenBuffers(1)
+
+    # Daten auf die GPU übertragen
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphere_buffer)
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sphere_array.nbytes, sphere_array, GL_DYNAMIC_DRAW)
+    print(sphere_array.nbytes)
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sphere_buffer)
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT)
+    size = glGetBufferParameteriv(GL_SHADER_STORAGE_BUFFER, GL_BUFFER_SIZE)
+    print(f"Buffer Size: {size} bytes")
+    data = glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sphere_array.nbytes)
+    print(data)
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+
+    
+
+
+    glGetError()
+    # buffer_size = len(mySpheres) * ctypes.sizeof(Sphere)
+    # print(f"Expected Buffer Size: {buffer_size}")
+
     
     glUseProgram(shader_program)
     glUniform1i(glGetUniformLocation(shader_program, "textureSampler"), 0)
 
     t_locations = glGetUniformLocation(compute_Programm,"t")
+    
     error = glGetError()
     if error != GL_NO_ERROR:
         print(f"OpenGL error: {error}")
@@ -198,12 +229,13 @@ def main():
             fCounter += 1
 
         glUseProgram(compute_Programm)
-        glUniform1f(t_locations,currentFrame)
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT)
+        # glUniform1f(t_locations,currentFrame)
         error = glGetError()
         if error != GL_NO_ERROR:
             print(f"OpenGL error: {error}")
 
-        glDispatchCompute(int(width/10),int(height/10),1)
+        glDispatchCompute(int(width),int(height),1)
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 
