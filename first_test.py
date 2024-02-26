@@ -11,12 +11,13 @@ def generate_random_spheres_new(num_spheres, min_position, max_position, min_rad
     positions = np.random.uniform(min_position, max_position, size=(num_spheres, 3)).astype(np.float32)
     radii = np.random.uniform(min_radius, max_radius, size=num_spheres).astype(np.float32)
     colors = np.random.uniform(min_color, max_color, size=(num_spheres, 3)).astype(np.float32)
+    reflectance = np.random.uniform(0, 1, size=num_spheres).astype(np.float32)
 
     # Combine positions and radii into position_radius array
     position_radius = np.column_stack((positions, radii))
 
     # Combine colors with padding into color_padding array
-    color_padding = np.column_stack((colors, np.zeros(num_spheres, dtype=np.float32)))
+    color_padding = np.column_stack((colors, reflectance))
 
     combined_array = np.hstack((position_radius, color_padding))
 
@@ -160,10 +161,10 @@ def main():
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, None);
     glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
     
-    num_spheres = 1000
+    num_spheres = 100
     min_position = np.array([-5.0, -5.0, -15.0])
     max_position = np.array([5.0, 5.0, -3.0])
-    min_color = np.array([0,0,0])
+    min_color = np.array([0.7,0.7,0.7])
     max_color = np.array([1,1,1])
     min_radius = 0.3
     max_radius = 0.8

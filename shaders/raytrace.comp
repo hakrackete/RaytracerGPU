@@ -4,12 +4,17 @@ layout (local_size_x = 10, local_size_y = 10, local_size_z = 1) in;
 
 layout(rgba32f, binding = 0) uniform image2D imgOutput;
 
+const int MAX_RECURSION = 1;
+const float EPSILON = 10e-6;
+
 struct HitRecord {
     float parameter;
     vec3 normal;
     vec3 rayDirection;
     vec3 intersectionPoint;
     vec3 color;
+    int recursions;
+    float reflectance;
 };
 
 struct Sphere{
@@ -30,9 +35,20 @@ layout(binding = 2)buffer readonly myFloats{
   float random_float[];
 };
 
+
 layout (location = 0) uniform float t;
 
-
+int fib(int n){
+  if (n==0){
+    return 0;
+  }
+  if (n==1){
+    return 1;
+  }
+  else{
+    return 2;
+  }
+}
 
 bool sphere_intersect(Ray ray, int myId, out HitRecord hitRecord){
   vec3 sphere_c = spheres[myId].position_radius.xyz;
@@ -65,19 +81,21 @@ bool sphere_intersect(Ray ray, int myId, out HitRecord hitRecord){
     hitRecord.normal = normalize(schnittpunkt - sphere_c);
     hitRecord.intersectionPoint = schnittpunkt;
     hitRecord.color = spheres[myId].color_padding.xyz;
+    hitRecord.reflectance = spheres[myId].color_padding.w;
+    
     return true;
   }
   return false;
 }
 
-void shade(HitRecord hitRecord, vec3 lightsource, out vec3 color){
+void shade(inout HitRecord hitRecord, vec3 lightsource){
   if (hitRecord.parameter == -1){
     float y_axis = float(gl_GlobalInvocationID.y)/imageSize(imgOutput).y;
-    color = mix(vec3(1),vec3(0.35,0.4,1.0),y_axis);
+    hitRecord.color = mix(vec3(1),vec3(0.35,0.4,1.0),y_axis);
     // color = vec3(1);
     return; 
   }
-  color = hitRecord.color;
+  // color = hitRecord.color;
   vec3 N = normalize(hitRecord.normal);
   vec3 L = normalize(lightsource - hitRecord.intersectionPoint);
   vec3 V = normalize(-1 * hitRecord.rayDirection);
@@ -90,11 +108,7 @@ void shade(HitRecord hitRecord, vec3 lightsource, out vec3 color){
 
   float general_intensity = 0.5 * diffuse_intensity + 0.2 * specular_intensity + 0.3 * ambient_intensity; 
   
-  color *= general_intensity;
-  // color = hitRecord.color;
-  // color = vec3((hitRecord.parameter - 10),0.0,0.0);
-  // color = hitRecord.normal;
-  // color = R;
+  hitRecord.color *= general_intensity;
 }
 
 void intersect(Ray ray,out HitRecord hitRecord){
@@ -134,17 +148,33 @@ void main(){
     ray.o = vec3(x * max_x,y*max_y,0.0);
     ray.d = normalize(vec3(0.0,0.0,-1.0));
     intersect(ray,hitRecord);
-    vec3 myColor = vec3(0.0);
-    shade(hitRecord,lightsource,myColor);
-    // float bufferSize = spheres.length();
-    // myColor = vec3(t);
-    memoryBarrierBuffer();
+    shade(hitRecord,lightsource);
+    vec3 finalColor = vec3(0.0);
+    float anteil = 1;
+    finalColor += anteil * (1-hitRecord.reflectance) * hitRecord.color;
 
-    // if (spheres[1].radius ==0){
-    //   myColor = vec3(0.5);
-    // }
+    for (int recursion_count = 0; recursion_count < MAX_RECURSION; recursion_count++){
+      if (hitRecord.reflectance <= 0){
+        break;
+      }
+      anteil *= hitRecord.reflectance;
+      if (anteil <= 0.01){
+        break;
+      }
+      vec3 V = ray.d;
+      vec3 N = hitRecord.normal;
+      Ray ray;
+      ray.o = hitRecord.intersectionPoint + EPSILON * hitRecord.normal;
+      ray.d = reflect(V,N);
 
-    pixel.xyz = myColor;
+      HitRecord hitRecord;
+      hitRecord.parameter = -1;
+      intersect(ray,hitRecord);
+      shade(hitRecord,lightsource);
+      finalColor += anteil * (1-hitRecord.reflectance) * hitRecord.color;
+    }
+
+    pixel.xyz = finalColor;
 
     imageStore(imgOutput, pixel_coords, pixel);
     
