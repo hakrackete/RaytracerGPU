@@ -6,12 +6,12 @@ import numpy as np
 # same seed for testing purposes
 # np.random.seed(42)
 
-def generate_random_spheres_new(num_spheres, min_position, max_position, min_radius, max_radius, min_color, max_color):
+def generate_random_spheres_new(num_spheres, min_position, max_position, min_radius, max_radius, min_color, max_color,min_reflect,max_reflect):
     # Generate random positions, radii, and colors for each sphere
     positions = np.random.uniform(min_position, max_position, size=(num_spheres, 3)).astype(np.float32)
     radii = np.random.uniform(min_radius, max_radius, size=num_spheres).astype(np.float32)
     colors = np.random.uniform(min_color, max_color, size=(num_spheres, 3)).astype(np.float32)
-    reflectance = np.random.uniform(0, 1, size=num_spheres).astype(np.float32)
+    reflectance = np.random.uniform(min_reflect, max_reflect, size=num_spheres).astype(np.float32)
 
     # Combine positions and radii into position_radius array
     position_radius = np.column_stack((positions, radii))
@@ -92,7 +92,7 @@ def main():
 
     glfw.set_framebuffer_size_callback(window, framebuffer_size_callback)
     glViewport(0, 0, width, height)
-    glfw.swap_interval(0)
+    glfw.swap_interval(1)
     
     # Create Vertex Array Object (VAO), Vertex Buffer Object (VBO), and Element Buffer Object (EBO)
     VAO = glGenVertexArrays(1)
@@ -163,14 +163,17 @@ def main():
     
     num_spheres = 100
     min_position = np.array([-5.0, -5.0, -15.0])
-    max_position = np.array([5.0, 5.0, -3.0])
+    max_position = np.array([5.0, 5.0, -10.0])
     min_color = np.array([0.7,0.7,0.7])
     max_color = np.array([1,1,1])
     min_radius = 0.3
     max_radius = 0.8
+    min_reflectance = 0
+    max_reflectance = 1
+
 
     # mySpheres = generate_random_spheres(num_spheres,min_position,max_position,min_radius,max_radius,min_color,max_color)
-    sphere_array = generate_random_spheres_new(num_spheres,min_position,max_position,min_radius,max_radius,min_color,max_color)
+    sphere_array = generate_random_spheres_new(num_spheres,min_position,max_position,min_radius,max_radius,min_color,max_color,min_reflectance,max_reflectance)
 
     # sphere_array = np.array(random_spheres, dtype=[("position_radius", np.float32, 4), ("color_padding", np.float32, 4)])
     # print(sphere_array)
