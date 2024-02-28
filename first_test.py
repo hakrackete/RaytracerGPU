@@ -2,6 +2,7 @@ import glfw
 from OpenGL.GL import *
 import ctypes
 import numpy as np
+import moderngl as mgl
 
 # same seed for testing purposes
 # np.random.seed(42)
@@ -92,8 +93,15 @@ def main():
 
     glfw.set_framebuffer_size_callback(window, framebuffer_size_callback)
     glViewport(0, 0, width, height)
+
+    # wenn das fentser im Fokus ist, wird der cursor deaktiviert und in die Mitte des screens gesetzt
+    # glfw.set_input_mode(window,glfw.CURSOR,glfw.CURSOR_DISABLED)
     glfw.swap_interval(1)
     
+    # # test ob modernGL zusammen mit klassischem OpenGL funktioniert
+    # ctx = mgl.create_context()
+    # print("Default framebuffer is:", ctx.program()['t'])
+
     # Create Vertex Array Object (VAO), Vertex Buffer Object (VBO), and Element Buffer Object (EBO)
     VAO = glGenVertexArrays(1)
     VBO = glGenBuffers(1)
@@ -125,9 +133,9 @@ def main():
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, float_buffer)
 
     float_array =np.array([0.2,0.4,0.2],dtype=np.float32) 
-    print(float_array)
+    # print(float_array)
     glBufferData(GL_SHADER_STORAGE_BUFFER, float_array.nbytes, float_array, GL_DYNAMIC_DRAW)
-    print(float_array.nbytes)
+    # print(float_array.nbytes)
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, float_buffer)
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT)
 
@@ -164,12 +172,12 @@ def main():
     num_spheres = 100
     min_position = np.array([-5.0, -5.0, -15.0])
     max_position = np.array([5.0, 5.0, -10.0])
-    min_color = np.array([0.7,0.7,0.7])
+    min_color = np.array([0.3,0.0,0.0])
     max_color = np.array([1,1,1])
     min_radius = 0.3
     max_radius = 0.8
     min_reflectance = 0
-    max_reflectance = 1
+    max_reflectance = 0
 
 
     # mySpheres = generate_random_spheres(num_spheres,min_position,max_position,min_radius,max_radius,min_color,max_color)
@@ -181,13 +189,13 @@ def main():
     # print(mySpheres[1].color[0])
 
     # Buffer-Objekt erstellen
-    print(sphere_array)
+    # print(sphere_array)
     sphere_buffer = glGenBuffers(1)
 
     # Daten auf die GPU übertragen
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphere_buffer)
     glBufferData(GL_SHADER_STORAGE_BUFFER, sphere_array.nbytes, sphere_array, GL_DYNAMIC_DRAW)
-    print(sphere_array.nbytes)
+    # print(sphere_array.nbytes)
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sphere_buffer)
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT)
     size = glGetBufferParameteriv(GL_SHADER_STORAGE_BUFFER, GL_BUFFER_SIZE)

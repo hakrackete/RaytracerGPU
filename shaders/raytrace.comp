@@ -84,7 +84,7 @@ void shade(inout HitRecord hitRecord, vec3 lightsource){
   if (hitRecord.parameter == -1){
     float y_axis = float(gl_GlobalInvocationID.y)/imageSize(imgOutput).y;
     hitRecord.color = mix(vec3(1),vec3(0.35,0.4,1.0),(hitRecord.rayDirection.y + 1)/2);
-    // color = vec3(1);
+    // hitRecord.color = vec3(t);
     return; 
   }
   // color = hitRecord.color;
@@ -122,17 +122,21 @@ void main(){
 
     float max_x = dims.x / 1000.0;
     float max_y = dims.y /1000.0;
+
+    float aspect_ratio = max_x /max_y;
     vec2 uv = vec2(pixel_coords)/ dims * 2 - vec2(1.0);
 
     float x = uv.x;
     float y = uv.y;
+
+    float fov = radians(70);
 
     vec3 lightsource =  vec3(10.0,0.0,0.0);
     HitRecord hitRecord;
     hitRecord.parameter = -1;
     Ray ray;
     ray.o = vec3(.0,.0,0.0);
-    ray.d = normalize(vec3(x * max_x,y*max_y,-1.0));
+    ray.d = normalize(vec3(x * tan(fov/2) * aspect_ratio,y*tan(fov/2),-1.0));
     intersect(ray,hitRecord);
     shade(hitRecord,lightsource);
     vec3 finalColor = vec3(0.0);
@@ -168,6 +172,10 @@ void main(){
         finalColor += anteil * (1-hitRecord.reflectance) * hitRecord.color;
       }
     }
+
+    // if (uv.x < 0){
+    //   finalColor = vec3(1.0,.0,.0);
+    // }
 
     pixel.xyz = finalColor;
 
