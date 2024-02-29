@@ -42,6 +42,11 @@ layout (location = 1) uniform float myFov;
 
 layout (location = 2) uniform mat4 camToWorld;
 
+layout (location = 3) uniform float mouse_x;
+layout (location = 4) uniform float mouse_y;
+
+
+
 bool sphere_intersect(Ray ray, int myId, out HitRecord hitRecord){
   vec3 sphere_c = spheres[myId].position_radius.xyz;
   float sphere_r = spheres[myId].position_radius.w;
@@ -173,9 +178,9 @@ void main(){
       }
     }
 
-    // if (uv.x < 0){
-    //   finalColor = vec3(1.0,.0,.0);
-    // }
+    if (length(gl_GlobalInvocationID.xy - vec2(mouse_x,mouse_y)) < 10){
+      finalColor = vec3(1.0,.0,.0);
+    }
 
     pixel.xyz = finalColor;
 

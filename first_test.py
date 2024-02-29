@@ -4,7 +4,7 @@ import ctypes
 import numpy as np
 import moderngl as mgl
 import glm
-
+from math import * 
 
 # same seed for testing purposes
 # np.random.seed(42)
@@ -33,6 +33,11 @@ cs_source = open("./shaders/raytrace.comp","r").read()
 width = 800
 height = 600
 fov = 60
+
+mouse_x = 0
+mouse_y = 0
+last_x = 0
+last_y = 0
 
 deltaTime = 0
 
@@ -68,12 +73,24 @@ void main() {
 }
 """
 
+def calc_direction(x,y):
+    sensitivity = 0.1
+    yaw = -x* sensitivity - 90
+    pitch = -y*sensitivity
+    pitch = max(-89,min(pitch,89))
+
+
+    directionvec = glm.vec3()
+    directionvec.x = cos(glm.radians(yaw)) * cos(glm.radians(pitch))
+    directionvec.y = sin(glm.radians(pitch))
+    directionvec.z = sin(glm.radians(yaw)) * cos(glm.radians(pitch))
+    directionvec = glm.normalize(directionvec)
+    return directionvec
+
+
 
 def process_input(window):
     global fov,cameraPos, deltaTime
-    
-
-
 
     cameraspeed = 10 * deltaTime
     fovspeed = 40 * deltaTime
@@ -91,6 +108,13 @@ def process_input(window):
         cameraPos.x += cameraspeed 
     if (glfw.get_key(window,glfw.KEY_D)==glfw.PRESS):
         cameraPos.x -= cameraspeed
+
+
+def mouse_callback(window,xpos,ypos):
+    global width,height,mouse_x,mouse_y
+    mouse_x = xpos
+    mouse_y = height-ypos
+
 def compile_shader(source, shader_type):
     shader = glCreateShader(shader_type)
     glShaderSource(shader, source)
@@ -115,7 +139,7 @@ def framebuffer_size_callback(window, w, h):
 
 
 def main():
-    global deltaTime
+    global deltaTime, cameraFront
 
     if not glfw.init():
         return
@@ -131,10 +155,11 @@ def main():
     glfw.make_context_current(window)
 
     glfw.set_framebuffer_size_callback(window, framebuffer_size_callback)
+    glfw.set_cursor_pos_callback(window,mouse_callback)
     glViewport(0, 0, width, height)
 
     # wenn das fentser im Fokus ist, wird der cursor deaktiviert und in die Mitte des screens gesetzt
-    # glfw.set_input_mode(window,glfw.CURSOR,glfw.CURSOR_DISABLED)
+    glfw.set_input_mode(window,glfw.CURSOR,glfw.CURSOR_DISABLED)
 
     # 0 = unlimited FPS, 1 = 60 FPS
     glfw.swap_interval(1)
@@ -240,6 +265,9 @@ def main():
     t_locations = glGetUniformLocation(compute_Programm,"t")
     fov_location = glGetUniformLocation(compute_Programm,"myFov")
     view_location = glGetUniformLocation(compute_Programm,"camToWorld")
+    x_loc = glGetUniformLocation(compute_Programm,"mouse_x")
+    y_loc = glGetUniformLocation(compute_Programm,"mouse_y")
+
 
     
     error = glGetError()
@@ -255,14 +283,17 @@ def main():
     view = np.array(glm.lookAt(cameraPos,cameraPos + cameraFront,cameraUp))
     while not(glfw.window_should_close(window)):
         # print(cameraPos)
-
-
+        offset_x = last_x - mouse_x
+        offset_y = last_y - mouse_y
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, None);
         glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
         process_input(window)
 
         currentFrame = glfw.get_time()
+
+        direction = calc_direction(mouse_x,mouse_y)
+        cameraFront = direction
         view = np.array(glm.lookAt(cameraPos,cameraPos + cameraFront,cameraUp))
         # print(type(currentFrame))
         deltaTime = currentFrame - lastFrame
@@ -272,6 +303,7 @@ def main():
             print(f"FPS: {1/deltaTime}")
             fps = 1/deltaTime
             print(f"time passed:{currentFrame}")
+            print(f"x: {mouse_x} y: {mouse_y}")
             fCounter =0
         else:
             fCounter += 1
@@ -280,6 +312,9 @@ def main():
         glUseProgram(compute_Programm)
         glUniform1f(t_locations,currentFrame)
         glUniform1f(fov_location,fov)
+        glUniform1f(x_loc,mouse_x)
+        glUniform1f(y_loc,mouse_y)
+        
         
         # dunno why, but when i invert it, it works
         glUniformMatrix4fv(view_location,1,GL_TRUE,view)
