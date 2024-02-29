@@ -4,7 +4,7 @@ layout (local_size_x = 10, local_size_y = 10, local_size_z = 1) in;
 
 layout(rgba32f, binding = 0) uniform image2D imgOutput;
 
-const int MAX_RECURSION = 2;
+const int MAX_RECURSION = 1;
 
 // epsilon value bigger than 10e-6 is important for the reflectance of spheres
 // otherwise self-intersection will happen
@@ -34,13 +34,13 @@ layout(binding = 1) buffer readonly SphereBuffer {
   Sphere spheres[];
 };
 
-layout(binding = 2)buffer readonly myFloats{
-  float random_float[];
-};
 
 
 layout (location = 0) uniform float t;
 
+layout (location = 1) uniform float myFov;
+
+layout (location = 2) uniform mat4 camToWorld;
 
 bool sphere_intersect(Ray ray, int myId, out HitRecord hitRecord){
   vec3 sphere_c = spheres[myId].position_radius.xyz;
@@ -123,20 +123,20 @@ void main(){
     float max_x = dims.x / 1000.0;
     float max_y = dims.y /1000.0;
 
-    float aspect_ratio = max_x /max_y;
+    float aspect_ratio = dims.x /float(dims.y);
     vec2 uv = vec2(pixel_coords)/ dims * 2 - vec2(1.0);
 
     float x = uv.x;
     float y = uv.y;
 
-    float fov = radians(70);
+    float fov = radians(myFov);
 
     vec3 lightsource =  vec3(10.0,0.0,0.0);
     HitRecord hitRecord;
     hitRecord.parameter = -1;
     Ray ray;
-    ray.o = vec3(.0,.0,0.0);
-    ray.d = normalize(vec3(x * tan(fov/2) * aspect_ratio,y*tan(fov/2),-1.0));
+    ray.o = vec3(camToWorld * vec4(.0,.0,.0,1.0));
+    ray.d = normalize (vec3(camToWorld * (vec4(x * tan(fov/2) * aspect_ratio,y*tan(fov/2),-1.0,1.0))) - ray.o);
     intersect(ray,hitRecord);
     shade(hitRecord,lightsource);
     vec3 finalColor = vec3(0.0);

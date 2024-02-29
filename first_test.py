@@ -3,6 +3,8 @@ from OpenGL.GL import *
 import ctypes
 import numpy as np
 import moderngl as mgl
+import glm
+
 
 # same seed for testing purposes
 # np.random.seed(42)
@@ -30,6 +32,14 @@ cs_source = open("./shaders/raytrace.comp","r").read()
 
 width = 800
 height = 600
+fov = 60
+
+deltaTime = 0
+
+
+cameraPos   = glm.vec3(0.0, 0.0,  0.0);
+cameraFront = glm.vec3(0.0, 0.0, -1.0);
+cameraUp    = glm.vec3(0.0, 1.0,  0.0);
 
 
 vertex_shader_source = """
@@ -57,10 +67,30 @@ void main() {
     FragColor = texture(textureSampler, TexCoord);
 }
 """
+
+
 def process_input(window):
+    global fov,cameraPos, deltaTime
+    
+
+
+
+    cameraspeed = 10 * deltaTime
+    fovspeed = 40 * deltaTime
     if (glfw.get_key(window,glfw.KEY_ESCAPE)==glfw.PRESS):
         glfw.set_window_should_close(window,True)
-
+    if (glfw.get_key(window,glfw.KEY_UP)==glfw.PRESS):
+        fov += fovspeed 
+    if (glfw.get_key(window,glfw.KEY_DOWN)==glfw.PRESS):
+        fov -= fovspeed
+    if (glfw.get_key(window,glfw.KEY_W)==glfw.PRESS):
+        cameraPos.z += cameraspeed 
+    if (glfw.get_key(window,glfw.KEY_S)==glfw.PRESS):
+        cameraPos.z -= cameraspeed
+    if (glfw.get_key(window,glfw.KEY_A)==glfw.PRESS):
+        cameraPos.x += cameraspeed 
+    if (glfw.get_key(window,glfw.KEY_D)==glfw.PRESS):
+        cameraPos.x -= cameraspeed
 def compile_shader(source, shader_type):
     shader = glCreateShader(shader_type)
     glShaderSource(shader, source)
@@ -72,11 +102,20 @@ def compile_shader(source, shader_type):
     return shader
 
 
-def framebuffer_size_callback(window, width, height):
-    glViewport(0, 0, width, height)
+def framebuffer_size_callback(window, w, h):
+    global width, height
+    # jittering and artifacts may happen on resizing the image
+    # caused by the size of the workgroups beeing a multiple of 10, while framebuffer is not
+
+    # w = int(w / 10) * 10 
+    # h = int(h / 10) * 10 
+    width = w
+    height = h
+    glViewport(0, 0, w, h)
 
 
 def main():
+    global deltaTime
 
     if not glfw.init():
         return
@@ -96,6 +135,8 @@ def main():
 
     # wenn das fentser im Fokus ist, wird der cursor deaktiviert und in die Mitte des screens gesetzt
     # glfw.set_input_mode(window,glfw.CURSOR,glfw.CURSOR_DISABLED)
+
+    # 0 = unlimited FPS, 1 = 60 FPS
     glfw.swap_interval(1)
     
     # # test ob modernGL zusammen mit klassischem OpenGL funktioniert
@@ -128,17 +169,6 @@ def main():
     glEnableVertexAttribArray(0)
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), ctypes.c_void_p(2 * sizeof(GLfloat)))
     glEnableVertexAttribArray(1)
-
-    float_buffer = glGenBuffers(1)
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, float_buffer)
-
-    float_array =np.array([0.2,0.4,0.2],dtype=np.float32) 
-    # print(float_array)
-    glBufferData(GL_SHADER_STORAGE_BUFFER, float_array.nbytes, float_array, GL_DYNAMIC_DRAW)
-    # print(float_array.nbytes)
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, float_buffer)
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT)
-
 
     compute = compile_shader(cs_source,GL_COMPUTE_SHADER)
 
@@ -177,19 +207,10 @@ def main():
     min_radius = 0.3
     max_radius = 0.8
     min_reflectance = 0
-    max_reflectance = 0
+    max_reflectance = 1
 
 
-    # mySpheres = generate_random_spheres(num_spheres,min_position,max_position,min_radius,max_radius,min_color,max_color)
     sphere_array = generate_random_spheres_new(num_spheres,min_position,max_position,min_radius,max_radius,min_color,max_color,min_reflectance,max_reflectance)
-
-    # sphere_array = np.array(random_spheres, dtype=[("position_radius", np.float32, 4), ("color_padding", np.float32, 4)])
-    # print(sphere_array)
-
-    # print(mySpheres[1].color[0])
-
-    # Buffer-Objekt erstellen
-    # print(sphere_array)
     sphere_buffer = glGenBuffers(1)
 
     # Daten auf die GPU übertragen
@@ -217,6 +238,9 @@ def main():
     glUniform1i(glGetUniformLocation(shader_program, "textureSampler"), 0)
 
     t_locations = glGetUniformLocation(compute_Programm,"t")
+    fov_location = glGetUniformLocation(compute_Programm,"myFov")
+    view_location = glGetUniformLocation(compute_Programm,"camToWorld")
+
     
     error = glGetError()
     if error != GL_NO_ERROR:
@@ -225,24 +249,41 @@ def main():
 
     glClearColor(0.3,0.7,0.3,1.0)
 
-    deltaTime = 0
     lastFrame = 0
     fCounter = 0
+    fps = 0
+    view = np.array(glm.lookAt(cameraPos,cameraPos + cameraFront,cameraUp))
     while not(glfw.window_should_close(window)):
+        # print(cameraPos)
+
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, None);
+        glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
         process_input(window)
+
         currentFrame = glfw.get_time()
+        view = np.array(glm.lookAt(cameraPos,cameraPos + cameraFront,cameraUp))
         # print(type(currentFrame))
         deltaTime = currentFrame - lastFrame
         lastFrame = currentFrame
-        if fCounter > 60:
+        
+        if fCounter  > fps:
             print(f"FPS: {1/deltaTime}")
+            fps = 1/deltaTime
+            print(f"time passed:{currentFrame}")
             fCounter =0
         else:
             fCounter += 1
 
+
         glUseProgram(compute_Programm)
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT)
         glUniform1f(t_locations,currentFrame)
+        glUniform1f(fov_location,fov)
+        
+        # dunno why, but when i invert it, it works
+        glUniformMatrix4fv(view_location,1,GL_TRUE,view)
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT)
         error = glGetError()
         if error != GL_NO_ERROR:
             print(f"OpenGL error: {error}")
