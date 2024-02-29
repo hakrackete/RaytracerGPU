@@ -4,7 +4,7 @@ layout (local_size_x = 10, local_size_y = 10, local_size_z = 1) in;
 
 layout(rgba32f, binding = 0) uniform image2D imgOutput;
 
-const int MAX_RECURSION = 1;
+const int MAX_RECURSION = 10;
 
 // epsilon value bigger than 10e-6 is important for the reflectance of spheres
 // otherwise self-intersection will happen
@@ -117,6 +117,7 @@ void intersect(Ray ray,out HitRecord hitRecord){
 
 void main(){
     // memoryBarrierBuffer();
+    mat4 camToWorldi = inverse(camToWorld);
 
     vec4 pixel = vec4(0.0, 0.0, 0.0, 1.0);
     ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
@@ -140,8 +141,9 @@ void main(){
     HitRecord hitRecord;
     hitRecord.parameter = -1;
     Ray ray;
-    ray.o = vec3(camToWorld * vec4(.0,.0,.0,1.0));
-    ray.d = normalize (vec3(camToWorld * (vec4(x * tan(fov/2) * aspect_ratio,y*tan(fov/2),-1.0,1.0))) - ray.o);
+    
+    ray.o = vec3(camToWorldi * vec4(.0,.0,.0,1.0));
+    ray.d = normalize(vec3(camToWorldi * (vec4(x * tan(fov/2) * aspect_ratio,y*tan(fov/2),-1.0,1.0))) - ray.o);
     intersect(ray,hitRecord);
     shade(hitRecord,lightsource);
     vec3 finalColor = vec3(0.0);

@@ -6,8 +6,14 @@ import moderngl as mgl
 import glm
 from math import * 
 
+'''
+sources: 
+- https://learnopengl.com/Getting-started/Camera
+- https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-generating-camera-rays/generating-camera-rays.html
+'''
+
 # same seed for testing purposes
-# np.random.seed(42)
+np.random.seed(42)
 
 def generate_random_spheres_new(num_spheres, min_position, max_position, min_radius, max_radius, min_color, max_color,min_reflect,max_reflect):
     # Generate random positions, radii, and colors for each sphere
@@ -75,8 +81,8 @@ void main() {
 
 def calc_direction(x,y):
     sensitivity = 0.1
-    yaw = -x* sensitivity - 90
-    pitch = -y*sensitivity
+    yaw = x* sensitivity - 90
+    pitch = y*sensitivity
     pitch = max(-89,min(pitch,89))
 
 
@@ -92,22 +98,25 @@ def calc_direction(x,y):
 def process_input(window):
     global fov,cameraPos, deltaTime
 
-    cameraspeed = 10 * deltaTime
+    cameraspeed = 4 * deltaTime
     fovspeed = 40 * deltaTime
+     
+    if (glfw.get_key(window,glfw.KEY_LEFT_SHIFT)==glfw.PRESS):
+        cameraspeed *= 2.5 
     if (glfw.get_key(window,glfw.KEY_ESCAPE)==glfw.PRESS):
         glfw.set_window_should_close(window,True)
     if (glfw.get_key(window,glfw.KEY_UP)==glfw.PRESS):
-        fov += fovspeed 
+        fov -= fovspeed 
     if (glfw.get_key(window,glfw.KEY_DOWN)==glfw.PRESS):
-        fov -= fovspeed
+        fov += fovspeed
     if (glfw.get_key(window,glfw.KEY_W)==glfw.PRESS):
-        cameraPos.z += cameraspeed 
+        cameraPos += cameraspeed * cameraFront 
     if (glfw.get_key(window,glfw.KEY_S)==glfw.PRESS):
-        cameraPos.z -= cameraspeed
+        cameraPos -= cameraspeed * cameraFront
     if (glfw.get_key(window,glfw.KEY_A)==glfw.PRESS):
-        cameraPos.x += cameraspeed 
+        cameraPos -= cameraspeed * glm.normalize(glm.cross(cameraFront,cameraUp))
     if (glfw.get_key(window,glfw.KEY_D)==glfw.PRESS):
-        cameraPos.x -= cameraspeed
+        cameraPos += cameraspeed * glm.normalize(glm.cross(cameraFront,cameraUp))
 
 
 def mouse_callback(window,xpos,ypos):
@@ -280,7 +289,7 @@ def main():
     lastFrame = 0
     fCounter = 0
     fps = 0
-    view = np.array(glm.lookAt(cameraPos,cameraPos + cameraFront,cameraUp))
+    view = glm.lookAt(cameraPos,cameraPos + cameraFront,cameraUp).to_list()
     while not(glfw.window_should_close(window)):
         # print(cameraPos)
         offset_x = last_x - mouse_x
@@ -294,8 +303,8 @@ def main():
 
         direction = calc_direction(mouse_x,mouse_y)
         cameraFront = direction
-        view = np.array(glm.lookAt(cameraPos,cameraPos + cameraFront,cameraUp))
-        # print(type(currentFrame))
+        view = glm.lookAt(cameraPos,cameraPos + cameraFront,cameraUp).to_list()
+        # print((cameraFront))
         deltaTime = currentFrame - lastFrame
         lastFrame = currentFrame
         
@@ -317,7 +326,7 @@ def main():
         
         
         # dunno why, but when i invert it, it works
-        glUniformMatrix4fv(view_location,1,GL_TRUE,view)
+        glUniformMatrix4fv(view_location,1,GL_FALSE,view)
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT)
         error = glGetError()
         if error != GL_NO_ERROR:
