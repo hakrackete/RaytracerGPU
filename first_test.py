@@ -5,7 +5,6 @@ import numpy as np
 import moderngl as mgl
 import glm
 from math import * 
-from PIL import Image
 import os
 from imageio.v3 import imread
 '''
@@ -32,14 +31,14 @@ last_y = mouse_y
 deltaTime = 0
 
 num_spheres = 100
-min_position = np.array([-5.0, -5.0, -15.0])
-max_position = np.array([5.0, 5.0, -10.0])
-min_color = np.array([0.3,0.0,0.0])
+min_position = np.array([-10.0, -10.0, -1.0])
+max_position = np.array([10.0, 10.0, 10.0])
+min_color = np.array([0.7,0.4,0.7])
 max_color = np.array([1,1,1])
 min_radius = 0.3
 max_radius = 0.8
 min_reflectance = 0
-max_reflectance = 0.5
+max_reflectance = 0.7
 
 
 
@@ -54,31 +53,8 @@ faces = [
 ]
 
 
-vertex_shader_source = """
-#version 430 core
-layout (location = 0) in vec2 aPos;
-layout (location = 1) in vec2 aTexCoord;
-
-out vec2 TexCoord;
-
-void main() {
-    gl_Position = vec4(aPos, 0.0, 1.0);
-    TexCoord = aTexCoord;
-}
-"""
-
-fragment_shader_source = """
-#version 430 core
-out vec4 FragColor;
-
-in vec2 TexCoord;
-
-uniform sampler2D textureSampler;
-
-void main() {
-    FragColor = texture(textureSampler, TexCoord);
-}
-"""
+vertex_shader_source = open("./shaders/passthroughRT.vert")
+fragment_shader_source = open("./shaders/passthroughRT.frag")
 
 
 
@@ -91,7 +67,7 @@ def generate_skybox(faces):
 
         img_data = imread(os.path.join("Textures","skybox",faces[i]))
 
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,0,GL_RGB,2048,2048,0,GL_RGB,GL_UNSIGNED_BYTE,img_data)
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,0,GL_RGB,img_data.shape[0],img_data.shape[1],0,GL_RGB,GL_UNSIGNED_BYTE,img_data)
         print(f"{i+1} Image(s) loaded")
     
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR)

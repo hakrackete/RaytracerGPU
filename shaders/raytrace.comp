@@ -5,7 +5,7 @@ layout (local_size_x = 10, local_size_y = 10, local_size_z = 1) in;
 layout(rgba32f, binding = 0) uniform image2D imgOutput;
 
 
-const int MAX_RECURSION = 2;
+const int MAX_RECURSION = 5;
 
 // epsilon value bigger than 10e-6 is important for the reflectance of spheres
 // otherwise self-intersection will happen
