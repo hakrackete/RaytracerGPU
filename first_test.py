@@ -7,7 +7,7 @@ import glm
 from math import * 
 from PIL import Image
 import os
-
+from imageio.v3 import imread
 '''
 sources: 
 - https://learnopengl.com/Getting-started/Camera
@@ -88,9 +88,10 @@ def generate_skybox(faces):
     glBindTexture(GL_TEXTURE_CUBE_MAP,textureID)
 
     for i in range(6):
-        img = Image.open(os.path.join("Textures","skybox",faces[i]))
-        img_data = np.array(list(img.getdata()),np.uint8)
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,0,GL_RGB,img.width,img.height,0,GL_RGB,GL_UNSIGNED_BYTE,img_data)
+
+        img_data = imread(os.path.join("Textures","skybox",faces[i]))
+
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,0,GL_RGB,2048,2048,0,GL_RGB,GL_UNSIGNED_BYTE,img_data)
         print(f"{i+1} Image(s) loaded")
     
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
