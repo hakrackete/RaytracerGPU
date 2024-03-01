@@ -4,7 +4,8 @@ layout (local_size_x = 10, local_size_y = 10, local_size_z = 1) in;
 
 layout(rgba32f, binding = 0) uniform image2D imgOutput;
 
-const int MAX_RECURSION = 10;
+
+const int MAX_RECURSION = 2;
 
 // epsilon value bigger than 10e-6 is important for the reflectance of spheres
 // otherwise self-intersection will happen
@@ -45,6 +46,7 @@ layout (location = 2) uniform mat4 camToWorld;
 layout (location = 3) uniform float mouse_x;
 layout (location = 4) uniform float mouse_y;
 
+layout (location = 5) uniform samplerCube skybox;
 
 
 bool sphere_intersect(Ray ray, int myId, out HitRecord hitRecord){
@@ -88,7 +90,8 @@ bool sphere_intersect(Ray ray, int myId, out HitRecord hitRecord){
 void shade(inout HitRecord hitRecord, vec3 lightsource){
   if (hitRecord.parameter == -1){
     float y_axis = float(gl_GlobalInvocationID.y)/imageSize(imgOutput).y;
-    hitRecord.color = mix(vec3(1),vec3(0.35,0.4,1.0),(hitRecord.rayDirection.y + 1)/2);
+    vec4 myCol = texture(skybox,hitRecord.rayDirection);
+    hitRecord.color = myCol.xyz;
     // hitRecord.color = vec3(t);
     return; 
   }
@@ -149,6 +152,7 @@ void main(){
     vec3 finalColor = vec3(0.0);
     float anteil = 1;
     finalColor += anteil * (1-hitRecord.reflectance) * hitRecord.color;
+    // finalColor = vec3(hitRecord.parameter / 100);
 
     for (int recursion_count = 0; recursion_count < MAX_RECURSION; recursion_count++){
       if (hitRecord.reflectance <= 0){

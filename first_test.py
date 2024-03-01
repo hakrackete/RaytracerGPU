@@ -5,6 +5,8 @@ import numpy as np
 import moderngl as mgl
 import glm
 from math import * 
+from PIL import Image
+import os
 
 '''
 sources: 
@@ -15,24 +17,6 @@ sources:
 # same seed for testing purposes
 np.random.seed(42)
 
-def generate_random_spheres_new(num_spheres, min_position, max_position, min_radius, max_radius, min_color, max_color,min_reflect,max_reflect):
-    # Generate random positions, radii, and colors for each sphere
-    positions = np.random.uniform(min_position, max_position, size=(num_spheres, 3)).astype(np.float32)
-    radii = np.random.uniform(min_radius, max_radius, size=num_spheres).astype(np.float32)
-    colors = np.random.uniform(min_color, max_color, size=(num_spheres, 3)).astype(np.float32)
-    reflectance = np.random.uniform(min_reflect, max_reflect, size=num_spheres).astype(np.float32)
-
-    # Combine positions and radii into position_radius array
-    position_radius = np.column_stack((positions, radii))
-
-    # Combine colors with padding into color_padding array
-    color_padding = np.column_stack((colors, reflectance))
-
-    combined_array = np.hstack((position_radius, color_padding))
-
-
-    return combined_array
-
 
 cs_source = open("./shaders/raytrace.comp","r").read()
 
@@ -40,17 +24,34 @@ width = 800
 height = 600
 fov = 60
 
-mouse_x = 0
-mouse_y = 0
-last_x = 0
-last_y = 0
+mouse_x = width/2
+mouse_y = height/2
+last_x = mouse_x
+last_y = mouse_y
 
 deltaTime = 0
+
+num_spheres = 100
+min_position = np.array([-5.0, -5.0, -15.0])
+max_position = np.array([5.0, 5.0, -10.0])
+min_color = np.array([0.3,0.0,0.0])
+max_color = np.array([1,1,1])
+min_radius = 0.3
+max_radius = 0.8
+min_reflectance = 0
+max_reflectance = 0.5
+
 
 
 cameraPos   = glm.vec3(0.0, 0.0,  0.0);
 cameraFront = glm.vec3(0.0, 0.0, -1.0);
 cameraUp    = glm.vec3(0.0, 1.0,  0.0);
+
+faces = [
+    'right.jpg', 'left.jpg',
+    'top.jpg', 'bottom.jpg',
+    'front.jpg', 'back.jpg'
+]
 
 
 vertex_shader_source = """
@@ -79,6 +80,49 @@ void main() {
 }
 """
 
+
+
+def generate_skybox(faces):
+    print("start skybox")
+    textureID = glGenTextures(1)
+    glBindTexture(GL_TEXTURE_CUBE_MAP,textureID)
+
+    for i in range(6):
+        img = Image.open(os.path.join("Textures","skybox",faces[i]))
+        img_data = np.array(list(img.getdata()),np.uint8)
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,0,GL_RGB,img.width,img.height,0,GL_RGB,GL_UNSIGNED_BYTE,img_data)
+        print(f"{i+1} Image(s) loaded")
+    
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE)
+
+    print("finished loading skybox")
+
+
+    return textureID
+
+def generate_random_spheres_new(num_spheres, min_position, max_position, min_radius, max_radius, min_color, max_color,min_reflect,max_reflect):
+    # Generate random positions, radii, and colors for each sphere
+    positions = np.random.uniform(min_position, max_position, size=(num_spheres, 3)).astype(np.float32)
+    radii = np.random.uniform(min_radius, max_radius, size=num_spheres).astype(np.float32)
+    colors = np.random.uniform(min_color, max_color, size=(num_spheres, 3)).astype(np.float32)
+    reflectance = np.random.uniform(min_reflect, max_reflect, size=num_spheres).astype(np.float32)
+
+    # Combine positions and radii into position_radius array
+    position_radius = np.column_stack((positions, radii))
+
+    # Combine colors with padding into color_padding array
+    color_padding = np.column_stack((colors, reflectance))
+
+    combined_array = np.hstack((position_radius, color_padding))
+
+
+    return combined_array
+
+
 def calc_direction(x,y):
     sensitivity = 0.1
     yaw = x* sensitivity - 90
@@ -98,7 +142,7 @@ def calc_direction(x,y):
 def process_input(window):
     global fov,cameraPos, deltaTime
 
-    cameraspeed = 4 * deltaTime
+    cameraspeed = 1 * deltaTime
     fovspeed = 40 * deltaTime
      
     if (glfw.get_key(window,glfw.KEY_LEFT_SHIFT)==glfw.PRESS):
@@ -168,7 +212,6 @@ def main():
     glViewport(0, 0, width, height)
 
     # wenn das fentser im Fokus ist, wird der cursor deaktiviert und in die Mitte des screens gesetzt
-    glfw.set_input_mode(window,glfw.CURSOR,glfw.CURSOR_DISABLED)
 
     # 0 = unlimited FPS, 1 = 60 FPS
     glfw.swap_interval(1)
@@ -233,15 +276,6 @@ def main():
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, None);
     glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
     
-    num_spheres = 100
-    min_position = np.array([-5.0, -5.0, -15.0])
-    max_position = np.array([5.0, 5.0, -10.0])
-    min_color = np.array([0.3,0.0,0.0])
-    max_color = np.array([1,1,1])
-    min_radius = 0.3
-    max_radius = 0.8
-    min_reflectance = 0
-    max_reflectance = 1
 
 
     sphere_array = generate_random_spheres_new(num_spheres,min_position,max_position,min_radius,max_radius,min_color,max_color,min_reflectance,max_reflectance)
@@ -258,6 +292,10 @@ def main():
     data = glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sphere_array.nbytes)
     print(data)
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    cube_id = generate_skybox(faces)
+    print(f"texID = {cube_id}")
+
 
 
     
@@ -276,6 +314,13 @@ def main():
     view_location = glGetUniformLocation(compute_Programm,"camToWorld")
     x_loc = glGetUniformLocation(compute_Programm,"mouse_x")
     y_loc = glGetUniformLocation(compute_Programm,"mouse_y")
+    skybox_location = glGetUniformLocation(compute_Programm,"skybox")
+    link_status = glGetProgramiv(compute_Programm, GL_LINK_STATUS)
+    if link_status != GL_TRUE:
+        print("Shader program linking failed.")
+        print(glGetProgramInfoLog(compute_Programm))
+    
+    print(f"skybox:{skybox_location}")
 
 
     
@@ -290,6 +335,7 @@ def main():
     fCounter = 0
     fps = 0
     view = glm.lookAt(cameraPos,cameraPos + cameraFront,cameraUp).to_list()
+    glfw.set_input_mode(window,glfw.CURSOR,glfw.CURSOR_DISABLED)
     while not(glfw.window_should_close(window)):
         # print(cameraPos)
         offset_x = last_x - mouse_x
