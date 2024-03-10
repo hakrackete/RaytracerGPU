@@ -7,6 +7,7 @@ import glm
 from math import * 
 import os
 from imageio.v3 import imread
+import pyassimp
 '''
 sources: 
 - https://learnopengl.com/Getting-started/Camera
@@ -55,7 +56,14 @@ faces = [
 
 vertex_shader_source = open("./shaders/passthroughRT.vert")
 fragment_shader_source = open("./shaders/passthroughRT.frag")
+model_path = "./models/bunny.obj"
 
+def load_model(path):
+    with pyassimp.load(path) as scene:
+        for mesh in scene.meshes:
+            print(f"vertex nr:1 is {len(mesh.vertices)}")
+            print(f"vertex nr:1 is {len(mesh.normals)}")
+            
 
 
 def generate_skybox(faces):
@@ -171,6 +179,8 @@ def framebuffer_size_callback(window, w, h):
 def main():
     global deltaTime, cameraFront
 
+    load_model(model_path)
+
     if not glfw.init():
         return
     glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR,4)
@@ -188,7 +198,6 @@ def main():
     glfw.set_cursor_pos_callback(window,mouse_callback)
     glViewport(0, 0, width, height)
 
-    # wenn das fentser im Fokus ist, wird der cursor deaktiviert und in die Mitte des screens gesetzt
 
     # 0 = unlimited FPS, 1 = 60 FPS
     glfw.swap_interval(1)
@@ -271,18 +280,9 @@ def main():
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
     cube_id = generate_skybox(faces)
-    print(f"texID = {cube_id}")
-
-
-
-    
-
 
     glGetError()
-    # buffer_size = len(mySpheres) * ctypes.sizeof(Sphere)
-    # print(f"Expected Buffer Size: {buffer_size}")
 
-    
     glUseProgram(shader_program)
     glUniform1i(glGetUniformLocation(shader_program, "textureSampler"), 0)
 
@@ -291,14 +291,6 @@ def main():
     view_location = glGetUniformLocation(compute_Programm,"camToWorld")
     x_loc = glGetUniformLocation(compute_Programm,"mouse_x")
     y_loc = glGetUniformLocation(compute_Programm,"mouse_y")
-    skybox_location = glGetUniformLocation(compute_Programm,"skybox")
-    link_status = glGetProgramiv(compute_Programm, GL_LINK_STATUS)
-    if link_status != GL_TRUE:
-        print("Shader program linking failed.")
-        print(glGetProgramInfoLog(compute_Programm))
-    
-    print(f"skybox:{skybox_location}")
-
 
     
     error = glGetError()
@@ -312,9 +304,11 @@ def main():
     fCounter = 0
     fps = 0
     view = glm.lookAt(cameraPos,cameraPos + cameraFront,cameraUp).to_list()
+    
+    # wenn das fentser im Fokus ist, wird der cursor deaktiviert und in die Mitte des screens gesetzt
     glfw.set_input_mode(window,glfw.CURSOR,glfw.CURSOR_DISABLED)
     while not(glfw.window_should_close(window)):
-        # print(cameraPos)
+
         offset_x = last_x - mouse_x
         offset_y = last_y - mouse_y
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, None);
@@ -327,7 +321,7 @@ def main():
         direction = calc_direction(mouse_x,mouse_y)
         cameraFront = direction
         view = glm.lookAt(cameraPos,cameraPos + cameraFront,cameraUp).to_list()
-        # print((cameraFront))
+
         deltaTime = currentFrame - lastFrame
         lastFrame = currentFrame
         
@@ -346,19 +340,17 @@ def main():
         glUniform1f(fov_location,fov)
         glUniform1f(x_loc,mouse_x)
         glUniform1f(y_loc,mouse_y)
-        
-        
-        # dunno why, but when i invert it, it works
         glUniformMatrix4fv(view_location,1,GL_FALSE,view)
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT)
+
         error = glGetError()
         if error != GL_NO_ERROR:
             print(f"OpenGL error: {error}")
 
+        # starts the raytracing process
         glDispatchCompute(int(width/10),int(height/10),1)
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-
+        # writes image that the raytracer compute on two triangles that get then displayed on screen
         glUseProgram(shader_program)
         glClear(GL_COLOR_BUFFER_BIT)
 
