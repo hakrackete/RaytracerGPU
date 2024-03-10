@@ -7,7 +7,7 @@ import glm
 from math import * 
 import os
 from imageio.v3 import imread
-import pyassimp
+# import pyassimp
 '''
 sources: 
 - https://learnopengl.com/Getting-started/Camera
@@ -16,6 +16,7 @@ sources:
 
 # same seed for testing purposes
 np.random.seed(42)
+print("OpenGL Version:", glGetString(GL_VERSION))
 
 
 cs_source = open("./shaders/raytrace.comp","r").read()
@@ -58,11 +59,11 @@ vertex_shader_source = open("./shaders/passthroughRT.vert")
 fragment_shader_source = open("./shaders/passthroughRT.frag")
 model_path = "./models/bunny.obj"
 
-def load_model(path):
-    with pyassimp.load(path) as scene:
-        for mesh in scene.meshes:
-            print(f"vertex nr:1 is {len(mesh.vertices)}")
-            print(f"vertex nr:1 is {len(mesh.normals)}")
+# def load_model(path):
+#     with pyassimp.load(path) as scene:
+#         for mesh in scene.meshes:
+#             print(f"vertex nr:1 is {len(mesh.vertices)}")
+#             print(f"vertex nr:1 is {len(mesh.normals)}")
             
 
 
@@ -179,7 +180,7 @@ def framebuffer_size_callback(window, w, h):
 def main():
     global deltaTime, cameraFront
 
-    load_model(model_path)
+    # load_model(model_path)
 
     if not glfw.init():
         return
@@ -188,6 +189,7 @@ def main():
     glfw.window_hint(glfw.OPENGL_PROFILE,glfw.OPENGL_CORE_PROFILE)
 
     window = glfw.create_window((width), (height), "hallo", None, None)
+
     if not window:
         print("unable to create Window")
         glfw.terminate()
