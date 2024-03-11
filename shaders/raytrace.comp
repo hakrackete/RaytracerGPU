@@ -41,7 +41,7 @@ struct Model{
   Material material;
 };
 
-layout(binding=0) buffer SphereBuffer{
+layout(binding=1) buffer SphereBuffer{
   Sphere spheres[];
 };
 
