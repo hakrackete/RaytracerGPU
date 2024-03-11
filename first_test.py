@@ -181,17 +181,17 @@ def main():
     global deltaTime, cameraFront
 
     # load_model(model_path)
-    print("here")
+    print("here befor glfw init")
 
     if not glfw.init():
         return
     glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR,4)
     glfw.window_hint(glfw.CONTEXT_VERSION_MINOR,3)
-    # glfw.window_hint(glfw.OPENGL_PROFILE,glfw.OPENGL_CORE_PROFILE)
+    glfw.window_hint(glfw.OPENGL_PROFILE,glfw.OPENGL_CORE_PROFILE)
     print("here")
 
     window = glfw.create_window((width), (height), "hallo", None, None)
-    print("here")
+    print("here after glfw init")
 
     if not window:
         print("unable to create Window")
