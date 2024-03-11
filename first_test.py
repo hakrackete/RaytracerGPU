@@ -16,7 +16,6 @@ sources:
 
 # same seed for testing purposes
 np.random.seed(42)
-print("OpenGL Version:", glGetString(GL_VERSION))
 
 
 cs_source = open("./shaders/raytrace.comp","r").read()
@@ -55,9 +54,10 @@ faces = [
 ]
 
 
-vertex_shader_source = open("./shaders/passthroughRT.vert")
-fragment_shader_source = open("./shaders/passthroughRT.frag")
+vertex_shader_source = open("./shaders/passthroughRT.vert").read()
+fragment_shader_source = open("./shaders/passthroughRT.frag").read()
 model_path = "./models/bunny.obj"
+print("defug")
 
 # def load_model(path):
 #     with pyassimp.load(path) as scene:
@@ -181,14 +181,17 @@ def main():
     global deltaTime, cameraFront
 
     # load_model(model_path)
+    print("here")
 
     if not glfw.init():
         return
     glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR,4)
     glfw.window_hint(glfw.CONTEXT_VERSION_MINOR,3)
-    glfw.window_hint(glfw.OPENGL_PROFILE,glfw.OPENGL_CORE_PROFILE)
+    # glfw.window_hint(glfw.OPENGL_PROFILE,glfw.OPENGL_CORE_PROFILE)
+    print("here")
 
     window = glfw.create_window((width), (height), "hallo", None, None)
+    print("here")
 
     if not window:
         print("unable to create Window")
@@ -200,9 +203,10 @@ def main():
     glfw.set_cursor_pos_callback(window,mouse_callback)
     glViewport(0, 0, width, height)
 
+    print("here")
 
     # 0 = unlimited FPS, 1 = 60 FPS
-    glfw.swap_interval(1)
+    # glfw.swap_interval(1)
     
     # # test ob modernGL zusammen mit klassischem OpenGL funktioniert
     # ctx = mgl.create_context()
@@ -234,18 +238,31 @@ def main():
     glEnableVertexAttribArray(0)
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), ctypes.c_void_p(2 * sizeof(GLfloat)))
     glEnableVertexAttribArray(1)
+    print("hi")
 
     compute = compile_shader(cs_source,GL_COMPUTE_SHADER)
 
+    print("here")
+
     vertex_shader = compile_shader(vertex_shader_source,GL_VERTEX_SHADER)
     fragment_shader = compile_shader(fragment_shader_source,GL_FRAGMENT_SHADER)
+    print("here")
 
 
     compute_Programm = glCreateProgram()
     glAttachShader(compute_Programm,compute)
     glLinkProgram(compute_Programm)
+    link_status = glGetProgramiv(compute_Programm, GL_LINK_STATUS)
+    if link_status != GL_TRUE:
+        raise RuntimeError(glGetProgramInfoLog(compute_Programm))
+
 
     shader_program = glCreateProgram()
+    link_status = glGetProgramiv(shader_program, GL_LINK_STATUS)
+    if link_status != GL_TRUE:
+        raise RuntimeError(glGetProgramInfoLog(compute_Programm))
+
+
     glAttachShader(shader_program, vertex_shader)
     glAttachShader(shader_program, fragment_shader)
     glLinkProgram(shader_program)
