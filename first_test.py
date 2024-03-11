@@ -258,14 +258,14 @@ def main():
 
 
     shader_program = glCreateProgram()
-    link_status = glGetProgramiv(shader_program, GL_LINK_STATUS)
-    if link_status != GL_TRUE:
-        raise RuntimeError(glGetProgramInfoLog(compute_Programm))
 
 
     glAttachShader(shader_program, vertex_shader)
     glAttachShader(shader_program, fragment_shader)
     glLinkProgram(shader_program)
+    link_status = glGetProgramiv(shader_program, GL_LINK_STATUS)
+    if link_status != GL_TRUE:
+        raise RuntimeError(glGetProgramInfoLog(shader_program))
 
     glDeleteShader(compute)
     glDeleteShader(vertex_shader)
