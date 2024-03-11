@@ -41,20 +41,19 @@ struct Model{
   Material material;
 };
 
-layout(binding = 1) buffer readonly SphereBuffer {
+layout(binding=0) buffer SphereBuffer{
   Sphere spheres[];
 };
 
-layout(binding = 2) buffer readonly Positions{
-  vec3[] positions;
-};
 
+// layout(binding = 2) buffer readonly Positions{
+//   vec3[] positions;
+// }myPos
 
-layout(binding = 3) buffer readonly Normals{
-  vec3[] normals;
-};
-
-
+// layout(binding = 3) buffer readonly Normals{
+//   vec3[] normals;
+// }myNorm
+// ;
 
 
 

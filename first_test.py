@@ -15,7 +15,7 @@ sources:
 '''
 
 # same seed for testing purposes
-np.random.seed(42)
+# np.random.seed(42)
 
 
 cs_source = open("./shaders/raytrace.comp","r").read()
