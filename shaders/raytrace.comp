@@ -5,7 +5,7 @@ layout (local_size_x = 10, local_size_y = 10, local_size_z = 1) in;
 layout(rgba32f, binding = 0) uniform image2D imgOutput;
 
 
-const int MAX_RECURSION = 5;
+const int MAX_RECURSION = 0;
 
 // epsilon value bigger than 10e-6 is important for the reflectance of spheres
 // otherwise self-intersection will happen
@@ -20,6 +20,7 @@ struct HitRecord {
     int recursions;
     float reflectance;
 };
+
 
 struct Sphere{
   vec4 position_radius;
@@ -71,6 +72,15 @@ layout (location = 5) uniform samplerCube skybox;
 
 
 
+void reset_HR(inout HitRecord hitRecord){
+  hitRecord.parameter = -1;
+  hitRecord.normal = vec3(0.0);
+  hitRecord.rayDirection = vec3(0.0);
+  hitRecord.intersectionPoint = vec3(0.0);
+  hitRecord.color = vec3(0.0);
+  hitRecord.recursions = 0;
+  hitRecord.reflectance = 0.0;
+}
 
 bool sphere_intersect(Ray ray, int myId, out HitRecord hitRecord){
   vec3 sphere_c = spheres[myId].position_radius.xyz;
